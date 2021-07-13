@@ -1,4 +1,4 @@
-use season_date::*;
+use scal::*;
 use structopt::StructOpt;
 
 #[derive(StructOpt)]
