@@ -7,17 +7,25 @@ use yansi::{Color, Paint};
 #[derive(Debug, PartialEq, Clone, Copy, Enum)]
 pub enum Season {
     Winter,
+    Lent,
     Spring,
+    Tsuyu,
     Summer,
+    Obon,
     Autumn,
+    Advent,
 }
 
 impl Season {
-    pub const ALL: [Season; 4] = [
+    pub const ALL: [Season; 8] = [
         Season::Winter,
+        Season::Lent,
         Season::Spring,
+        Season::Tsuyu,
         Season::Summer,
+        Season::Obon,
         Season::Autumn,
+        Season::Advent,
     ];
 
     pub fn now() -> Season {
@@ -28,24 +36,32 @@ impl Season {
         use Season::*;
         match self {
             Winter => 0,
+            Lent => 7,
             Spring => 13,
+            Tsuyu => 20,
             Summer => 26,
+            Obon => 33,
             Autumn => 39,
+            Advent => 46,
         }
     }
 
     pub fn from_week(week: u32) -> Season {
         match week % 52 {
             x if x < 7 => Season::Winter,
+            x if x < 13 => Season::Lent,
             x if x < 20 => Season::Spring,
+            x if x < 26 => Season::Tsuyu,
             x if x < 33 => Season::Summer,
+            x if x < 39 => Season::Obon,
             x if x < 46 => Season::Autumn,
+            x if x < 52 => Season::Advent,
             _ => unreachable!(),
         }
     }
 
     pub fn weeks(self) -> std::ops::Range<u8> {
-        if self == Season::Autumn {
+        if self == Season::Advent {
             self.starting_week()..52
         } else {
             self.starting_week()..self.succ().starting_week()
@@ -55,39 +71,29 @@ impl Season {
     pub fn succ(self) -> Season {
         use Season::*;
         match self {
-            Winter => Spring,
-            Spring => Summer,
-            Summer => Autumn,
-            Autumn => Winter,
+            Winter => Lent,
+            Lent => Spring,
+            Spring => Tsuyu,
+            Tsuyu => Summer,
+            Summer => Obon,
+            Obon => Autumn,
+            Autumn => Advent,
+            Advent => Winter,
         }
-    }
-}
-
-fn month_colour(month: u32) -> Color {
-    match month {
-        1 | 2 | 3 => Color::Blue,
-        4 | 5 | 6 => Color::Green,
-        7 | 8 | 9 => Color::Yellow,
-        10 | 11 | 12 => Color::Red,
-        _ => panic!(),
     }
 }
 
 impl Display for Season {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        writeln!(f, "{:?} │ Mo Tu We Th Fr  Sa Su", self)?;
-        writeln!(f, "───────┼──────────────────────")?;
+        let season_name = format!("{:?}", self);
+        writeln!(f, "   ┌───────┤{:^8}├──────┐", season_name)?;
+        writeln!(f, "   │ Mo Tu We Th Fr  Sa Su │")?;
+        writeln!(f, "───┼───────────────────────┤")?;
         let today = Utc::today();
-        let this_week = today.iso_week().week() as u8;
         let year = today.year();
         for week in self.weeks() {
             let mut new_month = None;
-            let x = format!("w{:02}", week - self.starting_week() + 1);
-            if week == this_week {
-                write!(f, " > {} │", Paint::new(x).bold())?;
-            } else {
-                write!(f, "   {} │", x)?;
-            }
+            write!(f, "w{} │", week - self.starting_week() + 1)?;
             for &day in &[
                 Weekday::Mon,
                 Weekday::Tue,
@@ -102,8 +108,11 @@ impl Display for Season {
                 } else {
                     NaiveDate::from_isoywd(year, week.into(), day)
                 };
-                let color = month_colour(date.month());
-                let dimmed = date.month() % 2 == 0;
+                let color = if date.month() % 2 == 0 {
+                    Color::Blue
+                } else {
+                    Color::Magenta
+                };
                 if date.day() == 1 {
                     new_month = Some(date.month());
                 }
@@ -112,27 +121,22 @@ impl Display for Season {
                 }
                 if date == today.naive_local() {
                     write!(f, " {}", Paint::new(format!("{:2}", date.day())).bold())?;
-                } else if dimmed {
-                    write!(f, " {}", color.paint(format!("{:2}", date.day())).dimmed())?;
                 } else {
                     write!(f, " {}", color.paint(format!("{:2}", date.day())))?;
                 }
             }
+            write!(f, " │")?;
             if let Some(m) = new_month {
-                let color = month_colour(m);
-                let dimmed = m % 2 == 0;
-                if dimmed {
-                    write!(
-                        f,
-                        "  {:?}",
-                        color.paint(Month::from_u32(m).unwrap()).dimmed()
-                    )?;
+                let color = if m % 2 == 0 {
+                    Color::Blue
                 } else {
-                    write!(f, "  {:?}", color.paint(Month::from_u32(m).unwrap()))?;
-                }
+                    Color::Magenta
+                };
+                write!(f, "  {:?}", color.paint(Month::from_u32(m).unwrap()))?;
             }
             writeln!(f)?;
         }
+        f.write_str("───┴───────────────────────┘\n")?;
         Ok(())
     }
 }
