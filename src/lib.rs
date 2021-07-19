@@ -1,10 +1,12 @@
-use chrono::{Datelike, Month, NaiveDate, Utc, Weekday};
-use enum_map::Enum;
+mod spec;
+
+pub use crate::spec::*;
+use chrono::{Datelike, IsoWeek, Month, NaiveDate, Utc, Weekday};
 use num_traits::FromPrimitive;
 use std::fmt::{self, Display};
 use yansi::{Color, Paint};
 
-#[derive(Debug, PartialEq, Clone, Copy, Enum)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Season {
     Winter,
     Spring,
@@ -73,10 +75,58 @@ fn month_colour(month: u32) -> Color {
     }
 }
 
+pub fn print_week(week: IsoWeek, starting_week: u32) {
+    let today = Utc::today();
+    let mut new_month = None;
+    let weeknum = format!("w{:02}", week.week() - starting_week + 1);
+    if week == today.iso_week() {
+        print!(" > {} │", Paint::new(weeknum).bold());
+    } else {
+        print!("   {} │", weeknum);
+    }
+    for &day in &[
+        Weekday::Mon,
+        Weekday::Tue,
+        Weekday::Wed,
+        Weekday::Thu,
+        Weekday::Fri,
+        Weekday::Sat,
+        Weekday::Sun,
+    ] {
+        // if week == 0 { NaiveDate::from_isoywd(year - 1, 53, day)
+        let date = NaiveDate::from_isoywd(week.year(), week.week(), day);
+        let color = month_colour(date.month());
+        let dimmed = date.month() % 2 == 0;
+        if date.day() == 1 {
+            new_month = Some(date.month());
+        }
+        if day == Weekday::Sat {
+            print!("  ");
+        }
+        if date == today.naive_local() {
+            print!(" {}", Paint::new(format!("{:2}", date.day())).bold());
+        } else if dimmed {
+            print!(" {}", color.paint(format!("{:2}", date.day())).dimmed());
+        } else {
+            print!(" {}", color.paint(format!("{:2}", date.day())));
+        }
+    }
+    if let Some(m) = new_month {
+        let color = month_colour(m);
+        let dimmed = m % 2 == 0;
+        if dimmed {
+            print!("  {:?}", color.paint(Month::from_u32(m).unwrap()).dimmed());
+        } else {
+            print!("  {:?}", color.paint(Month::from_u32(m).unwrap()));
+        }
+    }
+    println!();
+}
+
 impl Display for Season {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        writeln!(f, "{:?} │ Mo Tu We Th Fr  Sa Su", self)?;
-        writeln!(f, "───────┼──────────────────────")?;
+        writeln!(f, "{:?} │ Mo Tu We Th Fr   Sa Su", self)?;
+        writeln!(f, "───────┼───────────────────────")?;
         let today = Utc::today();
         let this_week = today.iso_week().week() as u8;
         let year = today.year();
@@ -108,7 +158,7 @@ impl Display for Season {
                     new_month = Some(date.month());
                 }
                 if day == Weekday::Sat {
-                    write!(f, " ")?;
+                    write!(f, "  ")?;
                 }
                 if date == today.naive_local() {
                     write!(f, " {}", Paint::new(format!("{:2}", date.day())).bold())?;
