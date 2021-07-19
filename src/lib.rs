@@ -65,10 +65,10 @@ impl Season {
 
 fn month_colour(month: u32) -> Color {
     match month {
-        1 | 2 | 3 => Color::Blue,
-        4 | 5 | 6 => Color::Green,
-        7 | 8 | 9 => Color::Yellow,
-        10 | 11 | 12 => Color::Red,
+        12 | 1 | 2 => Color::Blue,
+        3 | 4 | 5 => Color::Green,
+        6 | 7 | 8 => Color::Yellow,
+        9 | 10 | 11 => Color::Red,
         _ => panic!(),
     }
 }
