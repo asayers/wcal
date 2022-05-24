@@ -45,7 +45,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         start.iso_week()..=end.iso_week()
     };
     for week in weeks_in_range(range) {
-        print_week(week, 1);
+        println!("{}", PrettyWeek::new(week));
     }
 
     Ok(())
