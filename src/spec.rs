@@ -8,7 +8,7 @@ fn new_week(year: i32, week: u32) -> anyhow::Result<IsoWeek> {
         .iso_week())
 }
 
-fn parse_one_week(i: &str) -> anyhow::Result<IsoWeek> {
+pub fn parse_one_week(i: &str) -> anyhow::Result<IsoWeek> {
     match i.chars().next() {
         None => Err(anyhow!("Empty string")),
         Some('w' | 'W') => {

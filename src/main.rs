@@ -1,6 +1,8 @@
 use chrono::*;
 use scal::*;
+use std::collections::BTreeMap;
 use structopt::StructOpt;
+use yansi::Paint;
 
 #[derive(StructOpt)]
 struct Opts {
@@ -17,8 +19,25 @@ struct Opts {
     month: bool,
 }
 
+fn parse_event(x: std::io::Result<String>) -> (IsoWeek, String) {
+    let x = x.unwrap();
+    let (week, event) = x.split_once(' ').unwrap();
+    (
+        scal::spec::parse_one_week(week).unwrap(),
+        event.trim().to_string(),
+    )
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let opts = Opts::from_args();
+
+    use std::io::BufRead;
+    let mut events = BTreeMap::<IsoWeek, Vec<String>>::default();
+    if let Ok(f) = std::fs::File::open(dirs::config_dir().unwrap().join("scal/events")) {
+        for (week, ev) in std::io::BufReader::new(f).lines().map(parse_event) {
+            events.entry(week).or_default().push(ev);
+        }
+    }
 
     println!("       │ Mo Tu We Th Fr   Sa Su");
     println!("───────┼───────────────────────");
@@ -45,7 +64,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         start.iso_week()..=end.iso_week()
     };
     for week in weeks_in_range(range) {
-        println!("{}", PrettyWeek::new(week));
+        print!("{}", PrettyWeek::new(week));
+        if let Some(evs) = events.get(&week) {
+            let evs = evs.join(" ▪ ");
+            if Utc::today().iso_week() == week {
+                print!("  {}", evs);
+            } else {
+                print!("  {}", Paint::new(evs).dimmed());
+            }
+        }
+        println!();
     }
 
     Ok(())

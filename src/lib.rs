@@ -1,4 +1,4 @@
-mod spec;
+pub mod spec;
 
 pub use crate::spec::*;
 use chrono::{Datelike, IsoWeek, Month, NaiveDate, Utc, Weekday};
@@ -137,15 +137,14 @@ impl Display for PrettyWeek {
         if let Some(m) = new_month {
             let color = month_colour(m);
             let dimmed = m % 2 == 0;
+            let x = format!("{:9}", format!("{:?}", Month::from_u32(m).unwrap()));
             if dimmed {
-                write!(
-                    f,
-                    "  {:?}",
-                    color.paint(Month::from_u32(m).unwrap()).dimmed()
-                )?;
+                write!(f, "  {}", color.paint(x).dimmed())?;
             } else {
-                write!(f, "  {:?}", color.paint(Month::from_u32(m).unwrap()))?;
+                write!(f, "  {}", color.paint(x))?;
             }
+        } else {
+            write!(f, "  {:9}", " ")?;
         }
         Ok(())
     }
