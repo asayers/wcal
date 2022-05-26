@@ -25,13 +25,17 @@ struct Opts {
     relative: bool,
 }
 
-fn parse_event(x: std::io::Result<String>) -> (IsoWeek, String) {
+fn parse_event(x: std::io::Result<String>) -> Option<(IsoWeek, String)> {
     let x = x.unwrap();
-    let (week, event) = x.split_once(' ').unwrap();
-    (
-        scal::spec::parse_one_week(week).unwrap(),
-        event.trim().to_string(),
-    )
+    if x.is_empty() || x.starts_with("#") || x.starts_with("//") {
+        None
+    } else {
+        let (week, event) = x.split_once(' ').unwrap();
+        Some((
+            scal::spec::parse_one_week(week).unwrap(),
+            event.trim().to_string(),
+        ))
+    }
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -40,7 +44,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     use std::io::BufRead;
     let mut events = BTreeMap::<IsoWeek, Vec<String>>::default();
     if let Ok(f) = std::fs::File::open(dirs::config_dir().unwrap().join("scal/events")) {
-        for (week, ev) in std::io::BufReader::new(f).lines().map(parse_event) {
+        for (week, ev) in std::io::BufReader::new(f).lines().flat_map(parse_event) {
             events.entry(week).or_default().push(ev);
         }
     }
