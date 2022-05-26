@@ -17,6 +17,12 @@ struct Opts {
     /// Show the current month
     #[structopt(long)]
     month: bool,
+    /// Don't break on seasons
+    #[structopt(long)]
+    continuous: bool,
+    /// Number weeks relative to the season
+    #[structopt(long)]
+    relative: bool,
 }
 
 fn parse_event(x: std::io::Result<String>) -> (IsoWeek, String) {
@@ -39,8 +45,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    println!("       │ Mo Tu We Th Fr   Sa Su");
-    println!("───────┼───────────────────────");
     let range = if let Some(spec) = opts.spec {
         spec.range()
     } else if opts.year {
@@ -63,8 +67,32 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let end = today + Duration::weeks(2);
         start.iso_week()..=end.iso_week()
     };
+
+    if opts.continuous {
+        println!("       │ Mo Tu We Th Fr   Sa Su");
+        println!("───────┼───────────────────────");
+    }
+    let mut season = None;
     for week in weeks_in_range(range) {
-        print!("{}", PrettyWeek::new(week));
+        if !opts.continuous {
+            let s = scal::eight::Season::from_week(week.week());
+            if season != Some(s) {
+                let sname = format!("{s:?}");
+                if season.is_some() {
+                    println!();
+                }
+                println!("{sname:>6} │ Mo Tu We Th Fr   Sa Su");
+                println!("───────┼───────────────────────");
+                season = Some(s);
+            }
+        }
+        let mut pretty_week = PrettyWeek::new(week);
+        if opts.relative {
+            if let Some(season) = season {
+                pretty_week.starting_week = season.starting_week();
+            }
+        }
+        print!("{pretty_week}");
         if let Some(evs) = events.get(&week) {
             let evs = evs.join(" ▪ ");
             if Utc::today().iso_week() == week {
