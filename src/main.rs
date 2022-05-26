@@ -9,14 +9,17 @@ struct Opts {
     /// Show the specified week or range of weeks
     spec: Option<WeeksSpec>,
     /// Show the current week
-    #[structopt(long)]
+    #[structopt(long, short)]
     week: bool,
     /// Show the current year
-    #[structopt(long)]
+    #[structopt(long, short)]
     year: bool,
     /// Show the current month
     #[structopt(long)]
     month: bool,
+    /// Show the current season
+    #[structopt(long)]
+    season: bool,
     /// Don't break on seasons
     #[structopt(long)]
     continuous: bool,
@@ -53,9 +56,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         spec.range()
     } else if opts.year {
         let year = Utc::today().year();
-        let start = NaiveDate::from_ymd(year, 1, 1);
-        let end = NaiveDate::from_ymd(year, 12, 31);
+        let (start, end) = if opts.continuous {
+            (
+                NaiveDate::from_ymd(year, 1, 1),
+                NaiveDate::from_ymd(year, 12, 31),
+            )
+        } else {
+            (
+                NaiveDate::from_ymd(year, 1, 4),
+                NaiveDate::from_ymd(year, 12, 31),
+            )
+        };
         start.iso_week()..=end.iso_week()
+    } else if opts.season {
+        scal::eight::YearSeason::now().weeks()
     } else if opts.month {
         let year = Utc::today().year();
         let month = Utc::today().month();
@@ -65,11 +79,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     } else if opts.week {
         let this_week = Utc::today().naive_local().iso_week();
         this_week..=this_week
-    } else {
+    } else if opts.continuous {
         let today = Utc::today().naive_local();
         let start = today - Duration::weeks(2);
         let end = today + Duration::weeks(2);
         start.iso_week()..=end.iso_week()
+    } else {
+        let this = scal::eight::YearSeason::now();
+        (*this.weeks().start())..=(*this.succ().weeks().end())
     };
 
     if opts.continuous {
