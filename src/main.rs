@@ -21,7 +21,7 @@ struct Opts {
     #[structopt(long)]
     season: bool,
     /// Don't break on seasons
-    #[structopt(long)]
+    #[structopt(long, short)]
     continuous: bool,
     /// Number weeks relative to the season
     #[structopt(long)]
@@ -88,8 +88,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         this_week..=this_week
     } else if opts.continuous {
         let today = Utc::today().naive_local();
-        let start = today - Duration::weeks(2);
-        let end = today + Duration::weeks(2);
+        let start = today - Duration::weeks(3);
+        let end = today + Duration::weeks(9);
         start.iso_week()..=end.iso_week()
     } else {
         let this = scal::eight::YearSeason::now();
