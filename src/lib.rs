@@ -39,14 +39,15 @@ impl PrettyWeek {
 impl Display for PrettyWeek {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut new_month = None;
-        let weeknum = format!("w{:02}", self.week - self.starting_week + 1);
-        if self.week == self.today.iso_week().week() as u8
-            && self.year == self.today.iso_week().year()
-        {
-            write!(f, " > {} │", Paint::new(weeknum).bold())?;
+        let this_week = self.today.iso_week();
+        let weeknum = self.week - self.starting_week + 1;
+        if self.week == this_week.week() as u8 && self.year == this_week.year() {
+            let x = format!(" ▶ w{weeknum:02}");
+            write!(f, "{}", Paint::new(x).bold())?;
         } else {
-            write!(f, "   {} │", weeknum)?;
+            write!(f, "   w{weeknum:02}")?;
         }
+        write!(f, " │")?;
         for &day in &[
             Weekday::Mon,
             Weekday::Tue,
@@ -80,14 +81,14 @@ impl Display for PrettyWeek {
         if let Some(m) = new_month {
             let color = month_colour(m);
             let dimmed = m % 2 == 0;
-            let x = format!("{:9}", format!("{:?}", Month::from_u32(m).unwrap()));
+            let x = &Month::from_u32(m).unwrap().name()[..3];
             if dimmed {
-                write!(f, "  {}", color.paint(x).dimmed())?;
+                write!(f, "  {} ", color.paint(x).dimmed())?;
             } else {
-                write!(f, "  {}", color.paint(x))?;
+                write!(f, "  {} ", color.paint(x))?;
             }
         } else {
-            write!(f, "  {:9}", " ")?;
+            write!(f, "      ")?;
         }
         Ok(())
     }
