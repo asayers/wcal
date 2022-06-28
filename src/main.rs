@@ -26,6 +26,9 @@ struct Opts {
     /// Number weeks relative to the season
     #[structopt(long)]
     relative: bool,
+    /// Disable colour output
+    #[structopt(long)]
+    no_color: bool,
 }
 
 fn parse_event(x: std::io::Result<String>) -> Option<(IsoWeek, String)> {
@@ -43,6 +46,10 @@ fn parse_event(x: std::io::Result<String>) -> Option<(IsoWeek, String)> {
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let opts = Opts::from_args();
+
+    if opts.no_color {
+        yansi::Paint::disable();
+    }
 
     use std::io::BufRead;
     let mut events = BTreeMap::<IsoWeek, Vec<String>>::default();
