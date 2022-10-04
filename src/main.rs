@@ -1,5 +1,5 @@
 use chrono::*;
-use scal::*;
+use wcal::*;
 use std::collections::BTreeMap;
 use structopt::StructOpt;
 use yansi::Paint;
@@ -38,7 +38,7 @@ fn parse_event(x: std::io::Result<String>) -> Option<(IsoWeek, String)> {
     } else {
         let (week, event) = x.split_once(' ').unwrap();
         Some((
-            scal::spec::parse_one_week(week).unwrap(),
+            wcal::spec::parse_one_week(week).unwrap(),
             event.trim().to_string(),
         ))
     }
@@ -53,7 +53,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     use std::io::BufRead;
     let mut events = BTreeMap::<IsoWeek, Vec<String>>::default();
-    if let Ok(f) = std::fs::File::open(dirs::config_dir().unwrap().join("scal/events")) {
+    if let Ok(f) = std::fs::File::open(dirs::config_dir().unwrap().join("wcal/events")) {
         for (week, ev) in std::io::BufReader::new(f).lines().flat_map(parse_event) {
             events.entry(week).or_default().push(ev);
         }
@@ -76,7 +76,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         };
         start.iso_week()..=end.iso_week()
     } else if opts.season {
-        scal::eight::YearSeason::now().weeks()
+        wcal::eight::YearSeason::now().weeks()
     } else if opts.month {
         let year = Utc::today().year();
         let month = Utc::today().month();
@@ -92,7 +92,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let end = today + Duration::weeks(9);
         start.iso_week()..=end.iso_week()
     } else {
-        let this = scal::eight::YearSeason::now();
+        let this = wcal::eight::YearSeason::now();
         (*this.weeks().start())..=(*this.succ().weeks().end())
     };
 
@@ -103,7 +103,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut season = None;
     for week in weeks_in_range(range) {
         if !opts.continuous {
-            let s = scal::eight::Season::from_week(week.week());
+            let s = wcal::eight::Season::from_week(week.week());
             if season != Some(s) {
                 let sname = format!("{s:?}");
                 if season.is_some() {
