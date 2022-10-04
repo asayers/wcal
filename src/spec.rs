@@ -1,4 +1,4 @@
-use crate::eight::{Season, YearSeason};
+use crate::{eight::Season, YearSeason};
 use anyhow::{anyhow, ensure};
 use chrono::{Datelike, IsoWeek, Month, NaiveDate, Utc, Weekday};
 use std::str::FromStr;
@@ -8,7 +8,7 @@ enum DateObject {
     Month(i32, Month),
     Week(i32, u8),
     Day(NaiveDate),
-    Season(YearSeason),
+    Season(YearSeason<Season>),
 }
 
 impl FromStr for DateObject {

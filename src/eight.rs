@@ -1,60 +1,6 @@
+use crate::Seasonlike;
 use anyhow::anyhow;
-use chrono::{Datelike, IsoWeek, NaiveDate, Utc, Weekday};
 use std::str::FromStr;
-
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub struct YearSeason {
-    pub year: i32,
-    pub season: Season,
-}
-
-impl YearSeason {
-    pub fn now() -> YearSeason {
-        let today = Utc::today();
-        YearSeason {
-            year: today.year(),
-            season: Season::from_week(today.iso_week().week()),
-        }
-    }
-
-    pub fn weeks(self) -> std::ops::RangeInclusive<IsoWeek> {
-        let start =
-            NaiveDate::from_isoywd(self.year, self.season.starting_week() as u32, Weekday::Mon)
-                .iso_week();
-        let end = NaiveDate::from_isoywd(self.year, self.season.ending_week() as u32, Weekday::Mon)
-            .iso_week();
-        start..=end
-    }
-
-    pub fn from_week(week: IsoWeek) -> YearSeason {
-        YearSeason {
-            year: week.year(),
-            season: Season::from_week(week.week()),
-        }
-    }
-
-    pub fn prev(self) -> YearSeason {
-        YearSeason {
-            year: if self.season == Season::Winter {
-                self.year - 1
-            } else {
-                self.year
-            },
-            season: self.season.prev(),
-        }
-    }
-
-    pub fn succ(self) -> YearSeason {
-        YearSeason {
-            year: if self.season == Season::Advent {
-                self.year + 1
-            } else {
-                self.year
-            },
-            season: self.season.succ(),
-        }
-    }
-}
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Season {
@@ -79,8 +25,10 @@ impl Season {
         Season::Autumn,
         Season::Advent,
     ];
+}
 
-    pub fn starting_week(self) -> u8 {
+impl Seasonlike for Season {
+    fn starting_week(self) -> u8 {
         use Season::*;
         match self {
             Winter => 1,
@@ -94,7 +42,7 @@ impl Season {
         }
     }
 
-    pub fn ending_week(self) -> u8 {
+    fn ending_week(self) -> u8 {
         use Season::*;
         match self {
             Winter => 7,
@@ -108,7 +56,7 @@ impl Season {
         }
     }
 
-    pub fn from_week(week: u32) -> Season {
+    fn from_week(week: u32) -> Season {
         match week % 52 {
             0 => Season::Advent,
             1..=7 => Season::Winter,
@@ -123,7 +71,7 @@ impl Season {
         }
     }
 
-    pub fn prev(self) -> Season {
+    fn prev(self) -> Season {
         use Season::*;
         match self {
             Lent => Winter,
@@ -137,7 +85,7 @@ impl Season {
         }
     }
 
-    pub fn succ(self) -> Season {
+    fn succ(self) -> Season {
         use Season::*;
         match self {
             Winter => Lent,

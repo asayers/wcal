@@ -1,7 +1,7 @@
 use chrono::*;
-use wcal::*;
 use std::collections::BTreeMap;
 use structopt::StructOpt;
+use wcal::*;
 use yansi::Paint;
 
 #[derive(StructOpt)]
@@ -76,7 +76,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         };
         start.iso_week()..=end.iso_week()
     } else if opts.season {
-        wcal::eight::YearSeason::now().weeks()
+        wcal::YearSeason::<wcal::eight::Season>::now().weeks()
     } else if opts.month {
         let year = Utc::today().year();
         let month = Utc::today().month();
@@ -92,7 +92,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let end = today + Duration::weeks(9);
         start.iso_week()..=end.iso_week()
     } else {
-        let this = wcal::eight::YearSeason::now();
+        let this = wcal::YearSeason::<wcal::eight::Season>::now();
         (*this.weeks().start())..=(*this.succ().weeks().end())
     };
 

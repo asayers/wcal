@@ -8,6 +8,68 @@ use num_traits::FromPrimitive;
 use std::fmt::{self, Display};
 use yansi::{Color, Paint};
 
+pub trait Seasonlike: PartialEq + Copy {
+    fn starting_week(self) -> u8;
+    fn ending_week(self) -> u8;
+    fn from_week(week: u32) -> Self;
+    fn prev(self) -> Self;
+    fn succ(self) -> Self;
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub struct YearSeason<T> {
+    pub year: i32,
+    pub season: T,
+}
+
+impl<T: Seasonlike> YearSeason<T> {
+    pub fn now() -> YearSeason<T> {
+        let today = Utc::today();
+        YearSeason {
+            year: today.year(),
+            season: T::from_week(today.iso_week().week()),
+        }
+    }
+
+    pub fn weeks(self) -> std::ops::RangeInclusive<IsoWeek> {
+        let start =
+            NaiveDate::from_isoywd(self.year, self.season.starting_week() as u32, Weekday::Mon)
+                .iso_week();
+        let end = NaiveDate::from_isoywd(self.year, self.season.ending_week() as u32, Weekday::Mon)
+            .iso_week();
+        start..=end
+    }
+
+    pub fn from_week(week: IsoWeek) -> YearSeason<T> {
+        YearSeason {
+            year: week.year(),
+            season: T::from_week(week.week()),
+        }
+    }
+
+    pub fn prev(self) -> YearSeason<T> {
+        YearSeason {
+            year: if self.season == T::from_week(1) {
+                self.year - 1
+            } else {
+                self.year
+            },
+            season: self.season.prev(),
+        }
+    }
+
+    pub fn succ(self) -> YearSeason<T> {
+        YearSeason {
+            year: if self.season == T::from_week(52) {
+                self.year + 1
+            } else {
+                self.year
+            },
+            season: self.season.succ(),
+        }
+    }
+}
+
 fn month_colour(month: u32) -> Color {
     match month {
         12 | 1 | 2 => Color::Blue,
