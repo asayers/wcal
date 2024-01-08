@@ -29,6 +29,9 @@ struct Opts {
     /// Disable colour output
     #[structopt(long)]
     no_color: bool,
+    /// Print the date and exit
+    #[structopt(long)]
+    date: bool,
 }
 
 fn parse_event(x: std::io::Result<String>) -> Option<(IsoWeek, String)> {
@@ -46,6 +49,14 @@ fn parse_event(x: std::io::Result<String>) -> Option<(IsoWeek, String)> {
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let opts = Opts::from_args();
+
+    if opts.date {
+        let season = wcal::YearSeason::<wcal::eight::Season>::now().season;
+        let week = Utc::today().iso_week().week() - u32::from(season.starting_week()) + 1;
+        let day = Utc::today().weekday();
+        println!("{season:?}-{week} ({day})");
+        return Ok(());
+    }
 
     if opts.no_color {
         yansi::Paint::disable();
