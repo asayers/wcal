@@ -23,6 +23,9 @@ struct Opts {
     /// Don't break on seasons
     #[structopt(long, short)]
     continuous: bool,
+    /// Break on months
+    #[structopt(long)]
+    months: bool,
     /// Number weeks relative to the season
     #[structopt(long)]
     relative: bool,
@@ -47,6 +50,13 @@ fn parse_event(x: std::io::Result<String>) -> Option<(IsoWeek, String)> {
     }
 }
 
+#[derive(PartialEq, Eq)]
+enum Grouping {
+    None,
+    Months,
+    Seasons,
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let opts = Opts::from_args();
 
@@ -62,6 +72,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         yansi::Paint::disable();
     }
 
+    let grouping = match (opts.continuous, opts.months) {
+        (true, true) => return Err("Can't pass both --months and --continuous".into()),
+        (true, false) => Grouping::None,
+        (false, true) => Grouping::Months,
+        (false, false) => Grouping::Seasons,
+    };
+
     use std::io::BufRead;
     let mut events = BTreeMap::<IsoWeek, Vec<String>>::default();
     if let Ok(f) = std::fs::File::open(dirs::config_dir().unwrap().join("wcal/events")) {
@@ -74,7 +91,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         spec.range()
     } else if opts.year {
         let year = Utc::today().year();
-        let (start, end) = if opts.continuous {
+        let (start, end) = if grouping == Grouping::None {
             (
                 NaiveDate::from_ymd(year, 1, 1),
                 NaiveDate::from_ymd(year, 12, 31),
@@ -97,7 +114,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     } else if opts.week {
         let this_week = Utc::today().naive_local().iso_week();
         this_week..=this_week
-    } else if opts.continuous {
+    } else if grouping == Grouping::None {
         let today = Utc::today().naive_local();
         let start = today - Duration::weeks(3);
         let end = today + Duration::weeks(9);
@@ -107,22 +124,38 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         (*this.weeks().start())..=(*this.succ().weeks().end())
     };
 
-    if opts.continuous {
+    if grouping == Grouping::None {
         println!("       │ Mo Tu We Th Fr   Sa Su");
         println!("───────┼───────────────────────");
     }
     let mut season = None;
+    let mut month = None;
     for week in weeks_in_range(range) {
-        if !opts.continuous {
-            let s = wcal::eight::Season::from_week(week.week());
-            if season != Some(s) {
-                let sname = format!("{s:?}");
-                if season.is_some() {
-                    println!();
+        match grouping {
+            Grouping::Seasons => {
+                let s = wcal::eight::Season::from_week(week.week());
+                if season != Some(s) {
+                    let sname = format!("{s:?}");
+                    if season.is_some() {
+                        println!();
+                    }
+                    println!("{sname:>6} │ Mo Tu We Th Fr   Sa Su");
+                    println!("───────┼───────────────────────");
+                    season = Some(s);
                 }
-                println!("{sname:>6} │ Mo Tu We Th Fr   Sa Su");
-                println!("───────┼───────────────────────");
-                season = Some(s);
+            }
+            Grouping::None => (),
+            Grouping::Months => {
+                let m = week_to_month(week);
+                if month != Some(m) {
+                    let mname = &format!("{m:?}")[..3];
+                    if month.is_some() {
+                        println!();
+                    }
+                    println!("{mname:>6} │ Mo Tu We Th Fr   Sa Su");
+                    println!("───────┼───────────────────────");
+                    month = Some(m);
+                }
             }
         }
         let mut pretty_week = PrettyWeek::new(week);
@@ -144,6 +177,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     Ok(())
+}
+
+fn week_to_month(week: IsoWeek) -> Month {
+    let m = NaiveDate::from_isoywd_opt(week.year(), week.week(), Weekday::Sun)
+        .unwrap()
+        .month();
+    Month::try_from(u8::try_from(m).unwrap()).unwrap()
 }
 
 fn weeks_in_range(range: std::ops::RangeInclusive<IsoWeek>) -> impl Iterator<Item = IsoWeek> {
