@@ -5,9 +5,9 @@ authors = ["Alex Sayers <alex@asayers.com>"]
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0.41"
-chrono = "0.4.19"
+anyhow = "1.0.79"
+chrono = "0.4.31"
 dirs = "4.0.0"
-num-traits = "0.2.14"
-structopt = "0.3.21"
-yansi = "0.5.0"
+num-traits = "0.2.17"
+structopt = "0.3.26"
+yansi = "0.5.1"
