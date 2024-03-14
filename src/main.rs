@@ -62,8 +62,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     if opts.date {
         let season = wcal::YearSeason::<wcal::eight::Season>::now().season;
-        let week = Utc::today().iso_week().week() - u32::from(season.starting_week()) + 1;
-        let day = Utc::today().weekday();
+        let week =
+            Local::now().date_naive().iso_week().week() - u32::from(season.starting_week()) + 1;
+        let day = Local::now().date_naive().weekday();
         println!("{season:?}-{week} ({day})");
         return Ok(());
     }
@@ -90,32 +91,35 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let range = if let Some(spec) = opts.spec {
         spec.range()
     } else if opts.year {
-        let year = Utc::today().year();
+        let year = Local::now().date_naive().year();
         let (start, end) = if grouping == Grouping::None {
             (
-                NaiveDate::from_ymd(year, 1, 1),
-                NaiveDate::from_ymd(year, 12, 31),
+                NaiveDate::from_ymd_opt(year, 1, 1).unwrap(),
+                NaiveDate::from_ymd_opt(year, 12, 31).unwrap(),
             )
         } else {
             (
-                NaiveDate::from_ymd(year, 1, 4),
-                NaiveDate::from_ymd(year, 12, 31),
+                NaiveDate::from_ymd_opt(year, 1, 4).unwrap(),
+                NaiveDate::from_ymd_opt(year, 12, 31).unwrap(),
             )
         };
         start.iso_week()..=end.iso_week()
     } else if opts.season {
         wcal::YearSeason::<wcal::eight::Season>::now().weeks()
     } else if opts.month {
-        let year = Utc::today().year();
-        let month = Utc::today().month();
-        let start = NaiveDate::from_ymd(year, month, 1);
-        let end = NaiveDate::from_ymd(year, month + 1, 1).pred();
+        let year = Local::now().date_naive().year();
+        let month = Local::now().date_naive().month();
+        let start = NaiveDate::from_ymd_opt(year, month, 1).unwrap();
+        let end = NaiveDate::from_ymd_opt(year, month + 1, 1)
+            .unwrap()
+            .pred_opt()
+            .unwrap();
         start.iso_week()..=end.iso_week()
     } else if opts.week {
-        let this_week = Utc::today().naive_local().iso_week();
+        let this_week = Local::now().date_naive().iso_week();
         this_week..=this_week
     } else if grouping == Grouping::None {
-        let today = Utc::today().naive_local();
+        let today = Local::now().date_naive();
         let start = today - Duration::weeks(3);
         let end = today + Duration::weeks(9);
         start.iso_week()..=end.iso_week()
@@ -167,7 +171,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         print!("{pretty_week}");
         if let Some(evs) = events.get(&week) {
             let evs = evs.join(" ▪ ");
-            if Utc::today().iso_week() == week {
+            if Local::now().date_naive().iso_week() == week {
                 print!("  {}", evs);
             } else {
                 print!("  {}", Paint::new(evs).dimmed());
@@ -187,7 +191,9 @@ fn week_to_month(week: IsoWeek) -> Month {
 }
 
 fn weeks_in_range(range: std::ops::RangeInclusive<IsoWeek>) -> impl Iterator<Item = IsoWeek> {
-    let start = NaiveDate::from_isoywd(range.start().year(), range.start().week(), Weekday::Wed);
+    let start =
+        NaiveDate::from_isoywd_opt(range.start().year(), range.start().week(), Weekday::Wed)
+            .unwrap();
     let end = *range.end();
     start
         .iter_weeks()

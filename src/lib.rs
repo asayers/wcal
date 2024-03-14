@@ -3,7 +3,7 @@ pub mod four;
 pub mod spec;
 
 pub use crate::spec::*;
-use chrono::{Datelike, IsoWeek, Month, NaiveDate, Utc, Weekday};
+use chrono::{Datelike, IsoWeek, Local, Month, NaiveDate, Weekday};
 use num_traits::FromPrimitive;
 use std::fmt::{self, Display};
 use yansi::{Color, Paint};
@@ -24,7 +24,7 @@ pub struct YearSeason<T> {
 
 impl<T: Seasonlike> YearSeason<T> {
     pub fn now() -> YearSeason<T> {
-        let today = Utc::today();
+        let today = Local::now().date_naive();
         YearSeason {
             year: today.year(),
             season: T::from_week(today.iso_week().week()),
@@ -33,10 +33,13 @@ impl<T: Seasonlike> YearSeason<T> {
 
     pub fn weeks(self) -> std::ops::RangeInclusive<IsoWeek> {
         let start =
-            NaiveDate::from_isoywd(self.year, self.season.starting_week() as u32, Weekday::Mon)
+            NaiveDate::from_isoywd_opt(self.year, self.season.starting_week() as u32, Weekday::Mon)
+                .unwrap()
                 .iso_week();
-        let end = NaiveDate::from_isoywd(self.year, self.season.ending_week() as u32, Weekday::Mon)
-            .iso_week();
+        let end =
+            NaiveDate::from_isoywd_opt(self.year, self.season.ending_week() as u32, Weekday::Mon)
+                .unwrap()
+                .iso_week();
         start..=end
     }
 
@@ -93,7 +96,7 @@ impl PrettyWeek {
             year: week.year(),
             week: week.week() as u8,
             starting_week: 1,
-            today: Utc::today().naive_local(),
+            today: Local::now().date_naive(),
         }
     }
 }
@@ -120,9 +123,9 @@ impl Display for PrettyWeek {
             Weekday::Sun,
         ] {
             let date = if self.week == 0 {
-                NaiveDate::from_isoywd(self.year - 1, 53, day)
+                NaiveDate::from_isoywd_opt(self.year - 1, 53, day).unwrap()
             } else {
-                NaiveDate::from_isoywd(self.year, self.week as u32, day)
+                NaiveDate::from_isoywd_opt(self.year, self.week as u32, day).unwrap()
             };
             let color = month_colour(date.month());
             let dimmed = date.month() % 2 == 0;

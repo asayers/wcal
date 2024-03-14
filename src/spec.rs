@@ -1,6 +1,6 @@
 use crate::{eight::Season, YearSeason};
 use anyhow::{anyhow, ensure};
-use chrono::{Datelike, IsoWeek, Month, NaiveDate, Utc, Weekday};
+use chrono::{Datelike, IsoWeek, Local, Month, NaiveDate, Weekday};
 use std::str::FromStr;
 
 enum DateObject {
@@ -23,7 +23,7 @@ impl FromStr for DateObject {
                 tokens.remove(0);
                 x
             }
-            _ => Utc::now().year(),
+            _ => Local::now().year(),
         };
         Ok(if tokens.is_empty() {
             DateObject::Year(year)
@@ -36,7 +36,7 @@ impl FromStr for DateObject {
         } else {
             let month = tokens[0].parse()?;
             let day = tokens[1].parse()?;
-            DateObject::Day(NaiveDate::from_ymd(year, month, day))
+            DateObject::Day(NaiveDate::from_ymd_opt(year, month, day).unwrap())
         })
     }
 }
@@ -52,7 +52,7 @@ pub fn parse_one_week(i: &str) -> anyhow::Result<IsoWeek> {
         None => Err(anyhow!("Empty string")),
         Some('w' | 'W') => {
             let w = i[1..].parse()?;
-            new_week(Utc::today().year(), w)
+            new_week(Local::now().year(), w)
         }
         _ => {
             let y: i32 = i
@@ -76,7 +76,7 @@ pub enum WeeksSpec {
 
 impl WeeksSpec {
     pub fn range(&self) -> std::ops::RangeInclusive<IsoWeek> {
-        let this_week = || Utc::today().iso_week();
+        let this_week = || Local::now().iso_week();
         match *self {
             WeeksSpec::Single(x) => x..=x,
             WeeksSpec::Range(from, to) => from..=to,

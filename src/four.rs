@@ -1,5 +1,5 @@
 pub use crate::{spec::*, *};
-use chrono::{Datelike, Utc};
+use chrono::{Datelike, Local};
 use std::fmt::{self, Display};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -19,7 +19,7 @@ impl Season {
     ];
 
     pub fn now() -> Season {
-        Season::from_week(Utc::today().iso_week().week())
+        Season::from_week(Local::now().date_naive().iso_week().week())
     }
 
     pub fn starting_week(self) -> u8 {
@@ -65,7 +65,7 @@ impl Display for Season {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         writeln!(f, "{:?} │ Mo Tu We Th Fr   Sa Su", self)?;
         writeln!(f, "───────┼───────────────────────")?;
-        let today = Utc::today().naive_local();
+        let today = Local::now().date_naive();
         let starting_week = self.starting_week();
         for week in self.weeks() {
             write!(

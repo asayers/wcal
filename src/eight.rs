@@ -128,7 +128,7 @@ impl Display for Season {
     }
 }
 
-       let today = Utc::today();
+       let today = Local::now().date_naive();
        let year = today.year();
        for week in self.weeks() {
            let mut new_month = None;
