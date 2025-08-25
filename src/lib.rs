@@ -128,7 +128,7 @@ impl Display for PrettyWeek {
                 NaiveDate::from_isoywd_opt(self.year, self.week as u32, day).unwrap()
             };
             let color = month_colour(date.month());
-            let dimmed = date.month() % 2 == 0;
+            let dimmed = matches!(date.month() % 3, 0 | 2);
             if date.day() == 1 {
                 new_month = Some(date.month());
             }
@@ -145,7 +145,7 @@ impl Display for PrettyWeek {
         }
         if let Some(m) = new_month {
             let color = month_colour(m);
-            let dimmed = m % 2 == 0;
+            let dimmed = matches!(m % 3, 0 | 2);
             let x = &Month::from_u32(m).unwrap().name()[..3];
             if dimmed {
                 write!(f, "  {} ", color.paint(x).dimmed())?;
