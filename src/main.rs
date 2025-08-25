@@ -1,39 +1,34 @@
+use bpaf::Bpaf;
 use chrono::*;
 use std::collections::BTreeMap;
-use structopt::StructOpt;
 use wcal::*;
 use yansi::Paint;
 
-#[derive(StructOpt)]
+#[derive(Bpaf)]
+#[bpaf(options, fallback_to_usage)]
 struct Opts {
     /// Show the specified week or range of weeks
     spec: Option<WeeksSpec>,
     /// Show the current week
-    #[structopt(long, short)]
+    #[bpaf(long, short)]
     week: bool,
     /// Show the current year
-    #[structopt(long, short)]
+    #[bpaf(long, short)]
     year: bool,
     /// Show the current month
-    #[structopt(long)]
     month: bool,
     /// Show the current season
-    #[structopt(long)]
     season: bool,
     /// Don't break on seasons
-    #[structopt(long, short)]
+    #[bpaf(long, short)]
     continuous: bool,
     /// Break on months
-    #[structopt(long)]
     months: bool,
     /// Number weeks relative to the season
-    #[structopt(long)]
     relative: bool,
     /// Disable colour output
-    #[structopt(long)]
     no_color: bool,
     /// Print the date and exit
-    #[structopt(long)]
     date: bool,
 }
 
@@ -58,7 +53,7 @@ enum Grouping {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let opts = Opts::from_args();
+    let opts = opts().run();
 
     if opts.date {
         let season = wcal::YearSeason::<wcal::eight::Season>::now().season;
