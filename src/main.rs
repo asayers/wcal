@@ -1,6 +1,7 @@
 use bpaf::Bpaf;
 use chrono::*;
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, io::Write};
+use tabwriter::TabWriter;
 use wcal::*;
 use yansi::Paint;
 
@@ -26,6 +27,9 @@ struct Opts {
     months: bool,
     /// Number weeks relative to the season
     relative: bool,
+    /// Number of columns to print
+    #[bpaf(fallback(3))]
+    columns: usize,
     /// Disable colour output
     no_color: bool,
     /// Print the date and exit
@@ -123,9 +127,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         (*this.weeks().start())..=(*this.succ().weeks().end())
     };
 
+    let mut groups = vec![];
+    use std::fmt::Write;
+    let mut buf = String::new();
     if grouping == Grouping::None {
-        println!("       │ Mo Tu We Th Fr   Sa Su");
-        println!("───────┼───────────────────────");
+        writeln!(buf, "       │ Mo Tu We Th Fr   Sa Su")?;
+        writeln!(buf, "───────┼───────────────────────")?;
     }
     let mut season = None;
     let mut month = None;
@@ -136,10 +143,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 if season != Some(s) {
                     let sname = format!("{s:?}");
                     if season.is_some() {
-                        println!();
+                        groups.push(std::mem::take(&mut buf));
                     }
-                    println!("{sname:>6} │ Mo Tu We Th Fr   Sa Su");
-                    println!("───────┼───────────────────────");
+                    writeln!(buf, "{sname:>6} │ Mo Tu We Th Fr   Sa Su")?;
+                    writeln!(buf, "───────┼───────────────────────")?;
                     season = Some(s);
                 }
             }
@@ -149,10 +156,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 if month != Some(m) {
                     let mname = &format!("{m:?}")[..3];
                     if month.is_some() {
-                        println!();
+                        groups.push(std::mem::take(&mut buf));
                     }
-                    println!("{mname:>6} │ Mo Tu We Th Fr   Sa Su");
-                    println!("───────┼───────────────────────");
+                    writeln!(buf, "{mname:>6} │ Mo Tu We Th Fr   Sa Su")?;
+                    writeln!(buf, "───────┼───────────────────────")?;
                     month = Some(m);
                 }
             }
@@ -163,16 +170,38 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 pretty_week.starting_week = season.starting_week();
             }
         }
-        print!("{pretty_week}");
+        write!(buf, "{pretty_week}")?;
         if let Some(evs) = events.get(&week) {
             let evs = evs.join(" ▪ ");
             if Local::now().date_naive().iso_week() == week {
-                print!("  {}", evs);
+                write!(buf, "  {}", evs)?;
             } else {
-                print!("  {}", Paint::new(evs).dimmed());
+                write!(buf, "  {}", Paint::new(evs).dimmed())?;
             }
         }
-        println!();
+        writeln!(buf)?;
+    }
+    groups.push(std::mem::take(&mut buf));
+
+    let mut first_chunk = true;
+    let mut tw = TabWriter::new(std::io::stdout()).ansi(true).padding(5);
+    for groups in groups.chunks(opts.columns) {
+        if !first_chunk {
+            println!();
+        }
+        first_chunk = false;
+
+        let n = groups.iter().map(|x| x.lines().count()).max().unwrap_or(0);
+        for i in 0..n {
+            for group in groups {
+                if let Some(l) = group.lines().nth(i) {
+                    tw.write_all(l.as_bytes())?;
+                }
+                tw.write_all(b"\t")?;
+            }
+            tw.write_all(b"\n")?;
+        }
+        tw.flush()?;
     }
 
     Ok(())
